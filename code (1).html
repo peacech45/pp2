@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>연락처 프로그램</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { 
+            font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; 
+            background-color: #f4f7f6; 
+            color: #333; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start;
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 20px 10px;
+            box-sizing: border-box;
+        }
+        .container { 
+            width: 100%; 
+            max-width: 700px; 
+            background-color: #fff; 
+            padding: 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+        }
+        h1, h2, h3, h4 { text-align: center; color: #0056b3; margin-top:0; }
+        h1 { margin-bottom: 30px; }
+        .p-section-box { background-color: #eef5ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .p-input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; }
+        .p-input-group.horizontal { flex-direction: row; }
+        .p-input-group input { flex: 1; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+        .p-button-group { display: flex; gap: 10px; justify-content: flex-end; }
+        .p-btn { padding: 10px 20px; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        #p-searchInput { width: 100%; box-sizing: border-box; padding: 15px; margin-bottom: 20px; border: 1px solid #007bff; border-radius: 6px; font-size: 18px; }
+        #p-contactTable { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        #p-contactTable th, #p-contactTable td { border-bottom: 1px solid #ddd; padding: 12px; text-align: left; }
+        #p-contactTable th { background-color: #f2f2f2; }
+        .p-excel-info { font-size: 14px; color: #555; margin-top: 10px; text-align: center; }
+        #p-excelUpload { display: none; }
+        .p-admin-section, .p-admin-only { display: none; }
+        #p-header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        #p-logoutBtn { background: #dc3545; color: white; border-radius: 20px; padding: 5px 15px; }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            h1 { font-size: 1.8em; }
+            .p-input-group.horizontal { flex-direction: column; }
+            #p-contactTable th, #p-contactTable td { padding: 8px; font-size: 14px; }
+            .p-btn { padding: 8px 12px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="p-login-container" class="container">
+        <h1>로그인</h1>
+        <form id="p-loginForm">
+            <div class="p-input-group">
+                <input type="text" id="p-username" placeholder="아이디" required>
+                <input type="password" id="p-password" placeholder="비밀번호" required>
+            </div>
+            <button type="submit" class="p-btn" style="width: 100%; background-color: #007bff; color: white;">로그인</button>
+        </form>
+    </div>
+    <div id="p-app-container" class="container" style="display:none;">
+        <div id="p-header-area">
+            <h1 style="margin: 0; font-size: 1.8em;">📞 연락처 검색</h1>
+            <button id="p-logoutBtn" class="p-btn">로그아웃</button>
+        </div>
+        <input type="text" id="p-searchInput" placeholder="전화번호 뒷자리를 입력하여 검색하세요...">
+        <div class="p-admin-section">
+            <h3>관리자 기능</h3>
+            <div class="p-section-box">
+                <h4>연락처 직접 추가/수정</h4>
+                <form id="p-contactForm">
+                    <input type="hidden" id="p-contactId">
+                    <div class="p-input-group horizontal">
+                        <input type="text" id="p-contactName" placeholder="이름" required>
+                        <input type="text" id="p-contactPosition" placeholder="직분" required>
+                        <input type="tel" id="p-contactPhone" placeholder="전화번호" required>
+                    </div>
+                    <div class="p-button-group">
+                        <button type="button" id="p-cancelBtn" class="p-btn" style="background-color: #6c757d; color: white; display:none;">취소</button>
+                        <button type="submit" class="p-btn" style="background-color: #007bff; color: white;">저장</button>
+                    </div>
+                </form>
+            </div>
+            <div class="p-section-box">
+                <h4>엑셀로 한 번에 추가</h4>
+                <input type="file" id="p-excelUpload" accept=".xlsx, .xls">
+                <button id="p-uploadTrigger" class="p-btn" style="width: 100%; background-color: #17a2b8; color: white;">엑셀 파일 선택</button>
+                <p class="p-excel-info">※ A열=이름, B열=직분, C열=전화번호 형식</p>
+            </div>
+        </div>
+        <h2>검색 결과</h2>
+        <table id="p-contactTable">
+            <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>직분</th>
+                    <th>전화번호</th>
+                    <th class="p-admin-only">관리</th>
+                </tr>
+            </thead>
+            <tbody id="p-contactTableBody"></tbody>
+        </table>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        (function() {
+            const USERS = [
+                { id: 'admin', password: '1234', role: 'admin' },
+                { id: 'user', password: '1111', role: 'general' },
+                { id: 'guest', password: '0000', role: 'general' }
+            ];
+            const mainContainer = document.querySelector('body');
+            const loginContainer = mainContainer.querySelector('#p-login-container');
+            const appContainer = mainContainer.querySelector('#p-app-container');
+            const loginForm = mainContainer.querySelector('#p-loginForm');
+            const logoutBtn = mainContainer.querySelector('#p-logoutBtn');
+            const contactPosition = mainContainer.querySelector('#p-contactPosition');
+            const contactForm = mainContainer.querySelector('#p-contactForm');
+            const contactId = mainContainer.querySelector('#p-contactId');
+            const contactName = mainContainer.querySelector('#p-contactName');
+            const contactPhone = mainContainer.querySelector('#p-contactPhone');
+            const searchInput = mainContainer.querySelector('#p-searchInput');
+            const contactTableBody = mainContainer.querySelector('#p-contactTableBody');
+            const cancelBtn = mainContainer.querySelector('#p-cancelBtn');
+            const excelUpload = mainContainer.querySelector('#p-excelUpload');
+            const uploadTrigger = mainContainer.querySelector('#p-uploadTrigger');
+            let contacts = JSON.parse(localStorage.getItem('contacts_peacech_v3')) || [];
+            const showLoginScreen = () => {
+                loginContainer.style.display = 'block';
+                appContainer.style.display = 'none';
+            };
+            const showAppScreen = (role) => {
+                loginContainer.style.display = 'none';
+                appContainer.style.display = 'block';
+                const isAdmin = role === 'admin';
+                mainContainer.querySelectorAll('.p-admin-section').forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+                mainContainer.querySelectorAll('.p-admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+                renderContacts([]);
+                searchInput.value = '';
+                searchInput.focus();
+            };
+            const renderContacts = (filteredContacts = []) => {
+                const role = sessionStorage.getItem('userRole_peacech_v3');
+                const isAdmin = role === 'admin';
+                contactTableBody.innerHTML = '';
+                filteredContacts.forEach(contact => {
+                    const tr = document.createElement('tr');
+                    let adminButtons = '';
+                    if (isAdmin) {
+                        adminButtons = `<td class="p-admin-only"><button class="p-btn" style="background-color: #28a745; color: white;" data-id="${contact.id}">수정</button> <button class="p-btn" style="background-color: #dc3545; color: white;" data-id="${contact.id}">삭제</button></td>`;
+                    }
+                    tr.innerHTML = `<td>${contact.name}</td><td>${contact.position}</td><td>${contact.phone}</td>${isAdmin ? adminButtons : '<td class="p-admin-only"></td>'}`;
+                    contactTableBody.appendChild(tr);
+                });
+                mainContainer.querySelector('#p-contactTable .p-admin-only').style.display = isAdmin ? '' : 'none';
+            };
+            const saveContactsToLocalStorage = () => localStorage.setItem('contacts_peacech_v3', JSON.stringify(contacts));
+            const resetForm = () => {
+                contactId.value = ''; contactName.value = ''; contactPosition.value = ''; contactPhone.value = '';
+                cancelBtn.style.display = 'none';
+            };
+            const handleSearch = () => {
+                const searchTerm = searchInput.value.trim();
+                if (searchTerm === '') { renderContacts([]); return; }
+                const filtered = contacts.filter(contact => String(contact.phone).replace(/-/g, '').endsWith(searchTerm));
+                renderContacts(filtered);
+            };
+            const refreshAfterUpdate = () => { saveContactsToLocalStorage(); handleSearch(); };
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const foundUser = USERS.find(u => u.id === mainContainer.querySelector('#p-username').value && u.password === mainContainer.querySelector('#p-password').value);
+                if (foundUser) {
+                    sessionStorage.setItem('userRole_peacech_v3', foundUser.role);
+                    showAppScreen(foundUser.role);
+                } else {
+                    alert('아이디 또는 비밀번호가 일치하지 않습니다.');
+                }
+            });
+            logoutBtn.addEventListener('click', () => {
+                if (confirm('로그아웃 하시겠습니까?')) {
+                    sessionStorage.removeItem('userRole_peacech_v3');
+                    showLoginScreen();
+                }
+            });
+            contactForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const id = contactId.value;
+                const name = contactName.value.trim();
+                const position = contactPosition.value.trim();
+                const phone = contactPhone.value.trim();
+                if (!name || !position || !phone) return alert('이름, 직분, 전화번호를 모두 입력해주세요.');
+                if (id) {
+                    const index = contacts.findIndex(c => c.id == id);
+                    if (index > -1) contacts[index] = { ...contacts[index], name, position, phone };
+                } else {
+                    if (contacts.some(c => c.phone === phone)) return alert('이미 존재하는 전화번호입니다.');
+                    contacts.push({ id: Date.now(), name, position, phone });
+                }
+                refreshAfterUpdate();
+                resetForm();
+            });
+            contactTableBody.addEventListener('click', (e) => {
+                if (sessionStorage.getItem('userRole_peacech_v3') !== 'admin') return;
+                let target = e.target;
+                if (!target.classList.contains('p-btn')) return;
+                const id = target.dataset.id;
+                if (!id) return;
+                if (target.textContent.trim() === '수정') {
+                    const contactToEdit = contacts.find(c => c.id == id);
+                    contactId.value = contactToEdit.id;
+                    contactName.value = contactToEdit.name;
+                    contactPosition.value = contactToEdit.position;
+                    contactPhone.value = contactToEdit.phone;
+                    cancelBtn.style.display = 'inline-block';
+                    mainContainer.querySelector('.p-admin-section').scrollIntoView({ behavior: 'smooth' });
+                    contactName.focus();
+                }
+                if (target.textContent.trim() === '삭제') {
+                    if (confirm('정말로 이 연락처를 삭제하시겠습니까?')) {
+                        contacts = contacts.filter(c => c.id != id);
+                        refreshAfterUpdate();
+                        resetForm();
+                    }
+                }
+            });
+            searchInput.addEventListener('input', handleSearch);
+            uploadTrigger.addEventListener('click', () => excelUpload.click());
+            excelUpload.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                const isOverwrite = confirm("기존의 모든 데이터를 삭제하고 엑셀 파일로 덮어쓰시겠습니까?\n\n[확인] = 덮어쓰기\n[취소] = 기존 데이터에 추가하기");
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        let importedCount = 0;
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const jsonData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], { header: 1 });
+                        let newContacts = [];
+                        jsonData.forEach((row, index) => {
+                            const name = row[0] ? String(row[0]).trim() : null;
+                            const position = row[1] ? String(row[1]).trim() : null;
+                            const phone = row[2] ? String(row[2]).trim() : null;
+                            if (name && phone) {
+                                newContacts.push({ id: Date.now() + index, name, position: position || '', phone });
+                            }
+                        });
+                        if (isOverwrite) {
+                            contacts = newContacts;
+                            importedCount = newContacts.length;
+                        } else {
+                            newContacts.forEach(newContact => {
+                                if (!contacts.some(c => c.phone === newContact.phone)) {
+                                    contacts.push(newContact);
+                                    importedCount++;
+                                }
+                            });
+                        }
+                        if (importedCount > 0) {
+                            refreshAfterUpdate();
+                            const alertMessage = isOverwrite ? `${importedCount}개의 연락처를 새로 덮어썼습니다.` : `${importedCount}개의 새로운 연락처를 추가했습니다.`;
+                            alert(alertMessage);
+                        } else {
+                            alert('추가하거나 덮어쓸 새로운 연락처가 없습니다.');
+                        }
+                    } catch (error) {
+                        console.error("엑셀 파일 처리 오류:", error);
+                        alert('엑셀 파일 처리 중 오류가 발생했습니다.');
+                    } finally {
+                        event.target.value = null;
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+            cancelBtn.addEventListener('click', resetForm);
+            const loggedInRole = sessionStorage.getItem('userRole_peacech_v3');
+            if (loggedInRole) {
+                showAppScreen(loggedInRole);
+            } else {
+                showLoginScreen();
+            }
+        })();
+    });
+    </script>
+</body>
+</html>
